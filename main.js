@@ -62,7 +62,23 @@ module.exports = function(config) {
 
         mongo.connect(config.mongo, function(err, db) {
             
-            if(err) return rej(err);
+            if(err) {
+                var noop = function() {};
+                _db = { // noops
+                    collection: function() {
+                        return {
+                            find:       noop,
+                            remove:     noop,
+                            insert:     noop,
+                            update:     noop
+                        };
+                    },
+                    close:      noop
+                };
+                console.error(' ! db_mongo failed to connect to ' + config.mongo);
+                return send(API);
+                return rej(err);
+            }
             
             _db = db;
             API._db = db;
