@@ -41,6 +41,7 @@ var db_mongo = require('../main.js')
       }
   }
 
+  , interface
   , test
   , testData = {
         text:   'Testing',
@@ -60,8 +61,9 @@ describe('DB (Schema-Mongo)', function() {
     });
     
     it('should resolve to a DB interface API', function(done) {
-        mongo.then(function(interface) {
-            api = interface;
+        mongo.then(function(minterface) {
+            interface = minterface;
+            api = interface('mullet');
             find = api.find('test__');
             insert = api.insert('test__');
             remove = api.remove('test__');
@@ -70,12 +72,14 @@ describe('DB (Schema-Mongo)', function() {
             expect(remove).toBeDefined();
             expect(api.hasId).toBe(true);
             done();
+        }).catch(function(err) {
+            console.log(err);
         });
     });    
 
     it('should instantiate', function() {
         
-        DB = require('../../db/main.js')(api);
+        DB = require('../../db/main.js')(interface);
         Schema = DB.schema(collectionName, spec);
         test = new Schema(testData);
 
@@ -108,10 +112,13 @@ describe('DB (Schema-Mongo)', function() {
         
         test.save(function(err,res) {
             expect(err).toBeFalsy();
-            expect(res).toEqual(test.get());
-            expect(_.omit(res,'_id')).toEqual(_.extend({},testData,{text:'testing'}));
-            insertId = res._id;
+            expect(res.get()).toEqual(test.get());
+            expect(_.omit(res.get(),'_id')).toEqual(_.extend({},testData,{text:'testing'}));
+            insertId = res.id;
             done(); 
+        })
+        .catch(function(err) {
+            console.error(err);
         });
         
     });
@@ -126,7 +133,8 @@ describe('DB (Schema-Mongo)', function() {
             expect(test.get('text')).toEqual(updateText);
             // double check
             find({_id: insertId }, function(err, res) {
-                if(_.isArray(res))  res = res[0];
+                console.log(err,res);
+                if(_.isArray(res))  res = res[0] || {};
                 expect(res.text).toBe(updateText);
                 done();
             });
@@ -142,7 +150,7 @@ describe('DB (Schema-Mongo)', function() {
     });
     
     it('should close', function(done) {
-        api._db.close(function(err) {
+        api._cli.close(function(err) {
             expect(err).toBeNull();
             done();
         });
