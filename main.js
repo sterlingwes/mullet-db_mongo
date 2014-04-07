@@ -1,4 +1,5 @@
 var MongoDb = require('mongodb')
+  , ObjectID = MongoDb.ObjectID
   , MongoClient = MongoDb.MongoClient
   , MongoServer = MongoDb.Server
 
@@ -38,24 +39,30 @@ module.exports = function(config) {
                 };
                 console.error(' ! db_mongo failed to connect to ' + config.mongo);
                 this._db = _db;
-                return send(API);
+                return send({open:function(dbname) {
+                    
+                    this.dbname = dbname;
+                    return this;      
+                }.bind(this)});
             }
 
             this._cli = cli;
 
-            send(function(dbname) {
+            send({open:function(dbname) {
 
-                this.noproto = true;
                 this.dbname = dbname;
                 this._db = cli.db(dbname);
                 return this;
                 
-            }.bind(this));
+            }.bind(this)});
 
         }.bind(this));
     };
     
     MongoAPI.prototype._finder = function(collection, data, cb) {
+        if('_id' in data)
+            data._id = new ObjectID(data._id);
+            
         var cursor = collection.find(data);
         return cursor.toArray(cb);
     };
