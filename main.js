@@ -59,6 +59,13 @@ module.exports = function(config) {
         }.bind(this));
     };
     
+    MongoAPI.prototype._forceSelectors = function(selectors) {
+        if(selectors && selectors._id) {
+            selectors._id = new ObjectID(selectors._id);
+        }
+        return selectors;
+    };
+    
     MongoAPI.prototype._finder = function(collection, data, cb) {
         if('_id' in data)
             data._id = new ObjectID(data._id);
@@ -78,6 +85,12 @@ module.exports = function(config) {
         }        
     };
     
+    MongoAPI.prototype._updater = function(collection,selector,data,cb) {
+        var filteredSelectors = this._forceSelectors(selector);
+        console.log('updating', filteredSelectors, typeof filteredSelectors._id, data);
+        collection.update(filteredSelectors, data, {safe:true}, cb);
+    };
+    
     MongoAPI.prototype._remover = function(collection,search,cb) {
         if(!cb || typeof cb !== 'function') cb = function noop() {};
         return collection.remove(search, cb);
@@ -90,10 +103,25 @@ module.exports = function(config) {
         }.bind(this);
     };
     
+    MongoAPI.prototype.update = function(name) {
+        var collection = this._db.collection(name);
+        return function(selector, data, cb) {
+            return this._updater(collection, selector, data, cb);
+        }.bind(this);
+    };
+    
     MongoAPI.prototype.find = function(name) {
         var collection = this._db.collection(name);
         return function(data, cb) {
-            return this._finder(collection, data, cb);
+            return this._finder(collection, data, function(err,results) {
+                results = _.map(results, function(rec) {
+                    if(rec._id && rec._id instanceof ObjectID)
+                        rec._id = rec._id.toHexString();
+                        
+                    return rec;
+                });
+                cb.apply(null, [].slice.call(arguments,0));
+            });
         }.bind(this);
     };
     
