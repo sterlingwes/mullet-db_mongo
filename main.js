@@ -21,12 +21,16 @@ module.exports = function(config) {
         }.bind(this));
     }
     
-    MongoAPI.prototype.connect = function(send,rej) {
+    MongoAPI.prototype.wrapDriver = function(wrapper) {
+        this.wrap = wrapper;
+    };
+    
+    MongoAPI.prototype.connect = function(send) {
         this._mcli.open(function(err, cli) {
 
             if(err) {
-                var noop = function() {};
-                _db = { // noops
+                var noop = function() {}
+                ,  _db = { // noops
                     collection: function() {
                         return {
                             find:       noop,
@@ -87,7 +91,6 @@ module.exports = function(config) {
     
     MongoAPI.prototype._updater = function(collection,selector,data,cb) {
         var filteredSelectors = this._forceSelectors(selector);
-        console.log('updating', filteredSelectors, typeof filteredSelectors._id, data);
         collection.update(filteredSelectors, data, {safe:true}, cb);
     };
     
@@ -105,7 +108,17 @@ module.exports = function(config) {
     
     MongoAPI.prototype.update = function(name) {
         var collection = this._db.collection(name);
+          
         return function(selector, data, cb) {
+            
+            var spec = this.wrap.spec.fields;
+            _.each(spec, function(def,key) {
+                if(def.onUpdate) {
+                    data.$set = data.$set || {};
+                    data.$set[key] = def.onUpdate();
+                }
+            });
+            
             return this._updater(collection, selector, data, cb);
         }.bind(this);
     };
