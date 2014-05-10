@@ -99,9 +99,26 @@ module.exports = function(config) {
         return collection.remove(search, cb);
     };
     
+    MongoAPI.prototype._doHooks = function(op,data) {
+        var spec = this.wrap.spec.fields;
+        _.each(spec, function(def,key) {
+            if(op=='update' && def.onUpdate) {
+                data.$set = data.$set || {};
+                data.$set[key] = def.onUpdate();
+            }
+            if(op=='create' && def.onCreate) {
+                data[key] = def.onCreate();
+            }
+        });
+        
+        return data;
+    };
+    
     MongoAPI.prototype.insert = function(name) {
         var collection = this._db.collection(name);
         return function(data, cb) {
+            data = this._doHooks('create',data);
+            
             return this._saver(collection, data, cb);
         }.bind(this);
     };
@@ -110,14 +127,7 @@ module.exports = function(config) {
         var collection = this._db.collection(name);
           
         return function(selector, data, cb) {
-            
-            var spec = this.wrap.spec.fields;
-            _.each(spec, function(def,key) {
-                if(def.onUpdate) {
-                    data.$set = data.$set || {};
-                    data.$set[key] = def.onUpdate();
-                }
-            });
+            data = this._doHooks('update',data);
             
             return this._updater(collection, selector, data, cb);
         }.bind(this);
