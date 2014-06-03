@@ -1,0 +1,1 @@
+API interface for the db_mongo app as fulfilled by promise in constructor

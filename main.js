@@ -41,7 +41,7 @@ module.exports = function(config) {
                     },
                     close:      noop
                 };
-                console.error(' ! db_mongo failed to connect to ' + config.mongo);
+                console.error(' ! db_mongo failed to connect to ' + this.host+':'+this.post);
                 this._db = _db;
                 return send({open:function(dbname) {
                     
@@ -52,13 +52,24 @@ module.exports = function(config) {
 
             this._cli = cli;
 
-            send({open:function(dbname) {
-
-                this.dbname = dbname;
-                this._db = cli.db(dbname);
-                return this;
+            /*
+             * API interface for the db_mongo app as fulfilled by promise in constructor
+             */
+            send({
                 
-            }.bind(this)});
+                open: function(dbname) {
+
+                    this.dbname = dbname;
+                    this._db = cli.db(dbname);
+                    return this;
+                
+                }.bind(this),
+                
+                close: function(cb) {
+                    cli.close(cb);
+                }
+                
+            });
 
         }.bind(this));
     };
