@@ -93,11 +93,11 @@ module.exports = function(config) {
         if(data.id) {
             var dataset = data.get();
             delete dataset._id;
-            collection.update({_id: data.id}, {$set:dataset}, {safe:true}, cb);
+            collection.update({_id: data.id}, {$set:dataset}, {safe:true}, cb || function() {});
         }
         else {
-            collection.insert( _.isArray(data) ? data : ( 'get' in data ? data.get() : data ), {safe:true}, cb);
-        }        
+            collection.insert( _.isArray(data) ? data : ( 'get' in data ? data.get() : data ), {safe:true}, cb || function() {});
+        }
     };
     
     MongoAPI.prototype._updater = function(collection,selector,data,cb) {
